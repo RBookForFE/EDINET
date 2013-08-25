@@ -7,19 +7,32 @@ lststrUfoCatcher[["EDINET"]] <- "http://resource.ufocatch.com/atom/edinetx"
 strSIC <- "1301" # Securities Identification Code
 strURL <- paste(lststrUfoCatcher[["EDINET"]],"/query/",strSIC,sep="")
 objQuery <- httpGET(strURL)
-objXML <- xmlRoot(xmlTreeParse(objQuery,getDTD=FALSE))
-objData <- xmlParse(objQuery)
-lstData <- xmlToList(objData)
+objXML <- xmlTreeParse(objQuery)
+objXML_Children <- xmlChildren(objXML$doc$children$feed)
 
-for(i in 1:length(lstData)){
-  vecNames <- names(lstData[[i]])
-  if(length(vecNames)!=0){
-    if("title" %in% vecNames ){
-      strDocTitle <- lstData[[i]]$title
-      print(strDocTitle)
-    }
+vecNames <- names(objXML_Children)
+for(i in 1:length(objXML_Children)){
+  if(vecNames[i]=="entry"){
+    objEntry <- xmlChildren( objXML_Children[[i]] )
+    strTitle <- iconv( xmlValue(objEntry$title ),from="UTF-8",to="SHIFT-JIS" )
+    print(strTitle)
+    
+    # $link のうち，拡張子が .xbrl になってるやつがbody
   }
 }
+
+### working... ###
+# for(i in 1:length(objXML_Children)){
+#   if(vecNames[i]=="title")
+#   if(length(vecNames)!=0){
+#     if("title" %in% vecNames ){
+#       strDocTitle <- lstData[[i]]$title
+#       strTemp <- strsplit(strDocTitle,split=" ")
+#       print(strDocTitle)
+#       print(lstData[[i]]$link[1])
+#     }
+#   }
+# }
 
 
 ### garbage hereafter ###
