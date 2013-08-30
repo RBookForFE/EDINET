@@ -1,3 +1,7 @@
+# Sys.setlocale(category='LC_ALL',"")
+setwd("C:/R/EDINET")
+# options(encoding="UTF-8")
+
 library("RCurl")
 library("XML")
 
@@ -6,17 +10,37 @@ lststrUfoCatcher[["EDINET"]] <- "http://resource.ufocatch.com/atom/edinetx"
 
 strSIC <- "1301" # Securities Identification Code
 strURL <- paste(lststrUfoCatcher[["EDINET"]],"/query/",strSIC,sep="")
-objQuery <- httpGET(strURL)
-objXML <- xmlTreeParse(objQuery)
+objQuery <- httpGET(strURL,.encoding="UTF-8")
+
+objXML <- xmlTreeParse(strURL,encoding="UTF-8")
+top <- xmlRoot(objXML)
 objXML_Children <- xmlChildren(objXML$doc$children$feed)
 
-vecNames <- names(objXML_Children)
+# nodes <- getNodeSet(top,"//entry")
+# nodes <- getNodeSet(xmlParse(objQuery),"//entry")
+# names(nodes)
+
+### write xml to file
+# saveXML(,"data/temp.xml")
+
+vecURI <- vector(mode="character")
 for(i in 1:length(objXML_Children)){
-  if(vecNames[i]=="entry"){
+  if( xmlName( objXML_Children[[i]] ) =="entry" ){
     objEntry <- xmlChildren( objXML_Children[[i]] )
     strTitle <- iconv( xmlValue(objEntry$title ),from="UTF-8",to="SHIFT-JIS" )
-    print(strTitle)
-    
+    if( length( grep("有価証券報告書",strTitle) ) != 0 ){
+      print(strTitle)
+      strID <- xmlValue( objEntry$id )
+      for(j in 1:length(objEntry) ){
+        if( xmlName(objEntry[[j]]) == "link" ){
+          vecAttrs <- xmlAttrs(objEntry[[j]])
+          if(vecAttrs["type"]=="application/zip"){
+            temp <- getBinaryURL(url=vecAttrs["href"] )
+            writeBin( temp, paste("data/",strID,".zip",sep="") )
+          }
+        }
+      }
+    }    
     # $link のうち，拡張子が .xbrl になってるやつがbody
   }
 }
@@ -33,14 +57,3 @@ for(i in 1:length(objXML_Children)){
 #     }
 #   }
 # }
-
-
-### garbage hereafter ###
-vecTemp <- names(objXML)
-xmlName(objXML)
-names(objXML[["entry"]])
-
-xmlSApply(objXML[[1]],xmlName)
-tmp <- xmlSApply(objXML, function(x) xmlSApply(x, xmlValue))
-objXML[["entry"]]
-iconv( tmp$entry$title ,from="UTF-8",to="SHIFT_JIS")
