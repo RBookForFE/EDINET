@@ -16,22 +16,26 @@ objXML <- xmlTreeParse(strURL,encoding="UTF-8")
 top <- xmlRoot(objXML)
 objXML_Children <- xmlChildren(objXML$doc$children$feed)
 
+# 本来はXPathを使用することで簡単にxml treeを解析できるのだが，
+# valueにマルチバイト文字列を含む関係で，"XML" Packageのparserが
+# 正常に動作しない．仕方ないので，for文で処理する．
 # nodes <- getNodeSet(top,"//entry")
 # nodes <- getNodeSet(xmlParse(objQuery),"//entry")
 # names(nodes)
 
-### write xml to file
-# saveXML(,"data/temp.xml")
-
-vecURI <- vector(mode="character")
+lstEntry <- list()
+k <- 1
 for(i in 1:length(objXML_Children)){
   if( xmlName( objXML_Children[[i]] ) =="entry" ){
     objEntry <- xmlChildren( objXML_Children[[i]] )
     strTitle <- iconv( xmlValue(objEntry$title ),from="UTF-8",to="SHIFT-JIS" )
     if( length( grep("有価証券報告書",strTitle) ) != 0 ){
+      strID <- xmlValue( objEntry$id ) # EDINET IDを保存
       print(strTitle)
-      strID <- xmlValue( objEntry$id )
-      for(j in 1:length(objEntry) ){
+      lstEntry$Title[k] <- strTitle
+      lstEntry$ID[k] <- strID
+      k <- k + 1
+      for(j in 1:length(objEntry) ){ # XBRL形式の財務諸表一式をダウンロード
         if( xmlName(objEntry[[j]]) == "link" ){
           vecAttrs <- xmlAttrs(objEntry[[j]])
           if(vecAttrs["type"]=="application/zip"){
@@ -40,10 +44,12 @@ for(i in 1:length(objXML_Children)){
           }
         }
       }
-    }    
-    # $link のうち，拡張子が .xbrl になってるやつがbody
+    }
   }
 }
+
+## ダウンロードリストをファイルに保存
+write.csv(data.frame(lstEntry),"downloaded_XBRL.csv",row.names=FALSE)
 
 ### working... ###
 # for(i in 1:length(objXML_Children)){
