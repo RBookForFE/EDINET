@@ -1,5 +1,5 @@
 # Sys.setlocale(category='LC_ALL',"")
-setwd("C:/R/EDINET")
+setwd("F:/R/EDINET")
 # options(encoding="UTF-8")
 
 library("RCurl")
