@@ -4,6 +4,7 @@
 
 setwd("C:/R/EDINET")
 library("XML")
+library("plyr")
 
 ### 2013年度版EDINETタクソノミ本体の解凍先
 TaxonomySet.Path <- "C:/R/EDINET/Template/EDINET_taxonomy_2013_jp/"
@@ -54,21 +55,24 @@ xmlAttrs(nodes[[1]])
 unlink("temp",recursive=TRUE)
 
 ### 必要なelementの抽出を実行する
-top.Element <- xmlRoot(objXML.Element)
-dat.Elements <- xmlToDataFrame( getNodeSet(objXML.Element, "//element") )
-##top.template <- xmlRoot(objXML.Element)
+### 名前空間の定義を抽出
+lst.Namespaces <- xmlNamespaceDefinitions(objXML.Element)
+vec.Namespaces <- sapply(lst.Namespaces,function(lst){lst$uri})
+names(vec.Namespaces)[ names(vec.Namespaces)=="" ] <- "default"
 
-xmlNamespaceDefinitions(objXML.Label)
-top.Label <- xmlRoot(objXML.Label)
+### 語彙(=element)が定義されたノードの情報を data.frame に変換
+element.nodes <- getNodeSet(objXML.Element,path="//default:element",namespaces=vec.Namespaces)
+lst.element.attrs <- xmlApply( element.nodes, xmlAttrs)
+lst.element.attrs <- lapply(lst.element.attrs,function(vec){ data.frame(t(data.frame(vec))) } ) # ノードの属性をまとめて 1行のdata.frameのリスト に変換
+dat.elements <- rbind.fill(lst.element.attrs) # Package"plyr"が提供するrbind関数，未定義のフィールドはNAで補完される
 
-# objXML.Label <- xmlInternalTreeParse(objXML.Label.Path,encoding="UTF-8")
-objXML.Label <- xmlParse(objXML.Label.Path)
-#objXML.Label <- htmlParse(objXML.Label.Path)
-objXML.Label <- xmlParse(objXML.Label.Path,fullNamespaceInfo=TRUE)
-temp <- getNodeSet(objXML.Label,path="//label")
+write.csv(file=paste0(TaxonomySet.Path,"jpfr-t-cte_elements.csv"),x=dat.elements,row.names=FALSE)
+
+
 
 ## 名称リンクの加工
 ### 名前空間の定義を抽出
+objXML.Label <- xmlParse(objXML.Label.Path)
 lst.Namespaces <- xmlNamespaceDefinitions(objXML.Label)
 vec.Namespaces <- sapply(lst.Namespaces,function(lst){lst$uri})
 names(vec.Namespaces)[ names(vec.Namespaces)=="" ] <- "default"
@@ -83,10 +87,6 @@ dat.label.attrs$id.wo.label <- sub(pattern="^label_",replacement="",x=dat.label.
 rownames(dat.label.attrs) <- c(1:nrow(dat.label.attrs))
 
 write.csv(file=paste0(TaxonomySet.Path,"jpfr-t-cte_labels.csv"),x=dat.label.attrs,row.names=FALSE)
-
-# temp2 <- getNodeSet(objXML.Label,path="//labelarc[@xlink:from=\"balancesheetsabstract\"]",namespaces=vec.Namespaces[-1])
-# temp2 <- getNodeSet(objXML.Label,path="//labelarc[@xlink:from]",namespaces=vec.Namespaces[-1])
-# temp2 <- getNodeSet(objXML.Label,path="//labelArc",namespaces=vec.Namespaces[-1])
 
 
 
