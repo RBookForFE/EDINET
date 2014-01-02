@@ -1,5 +1,5 @@
 ## 2013/10/2 
-setwd("F:/R/EDINET")
+setwd("C:/R/EDINET")
 # options(encoding="UTF-8")
 
 library("RCurl")
@@ -28,7 +28,7 @@ vecYUHO.URI <- unlist(lapply(nodes_zip[isYUHO],xmlGetAttr,"href")) # 発見し�
 dir.create("data") # "data"フォルダを作成
 
 ## XBRLをダウンロード，"data"フォルダに保存
-for(i in 1:length(vecYUHO)){
+for(i in 1:length(vecYUHO.ID)){
   temp <- getBinaryURL(url=vecYUHO.URI[i] )
   writeBin( temp, paste("data/",vecYUHO.ID[i],".zip",sep="") )
 }
