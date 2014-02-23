@@ -1,6 +1,19 @@
-setwd("F:/R/EDINET")
+### 各社がEDINETに提出した財務諸表から，主要な勘定科目データのみを抽出する ###
+### "主要な勘定科目"については，EDINETタクソノミから生成済みであるものとする
+
+setwd("C:/R/EDINET")
 library("XML")
-# library("")
+library("plyr")
+
+### 2013年度版EDINETタクソノミ本体の解凍先
+TaxonomySet.Path <- "C:/R/EDINET/Template/EDINET_taxonomy_2013_jp/"
+
+### 語彙タクソノミ：商工業・その他、共通
+dat.elements.path <- paste0(TaxonomySet.Path,"")
+dat.elements <- read.csv(paste)
+
+### 名称リンク・定義リンクベース
+
 
 datEntry <- read.csv("downloaded_XBRL.csv")
 
@@ -27,7 +40,11 @@ getNodeSet(top,path="//CashAndDeposits") # Nullが返る＝namespace省略不可
 nodes <- getNodeSet(top,"//jpfr-t-cte:Goodwill")
 xmlAttrs(nodes[[1]])
 
-objXML.Template <- xmlParse( file="F:\")
-
 # 片付け
 unlink("temp",recursive=TRUE)
+
+### 必要なelementの抽出を実行する
+### 名前空間の定義を抽出
+lst.Namespaces <- xmlNamespaceDefinitions(objXML.Element)
+vec.Namespaces <- sapply(lst.Namespaces,function(lst){lst$uri})
+names(vec.Namespaces)[ names(vec.Namespaces)=="" ] <- "default"
