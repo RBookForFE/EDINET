@@ -47,4 +47,8 @@ unlink("temp",recursive=TRUE)
 ### 名前空間の定義を抽出
 lst.Namespaces <- xmlNamespaceDefinitions(objXML.Element)
 vec.Namespaces <- sapply(lst.Namespaces,function(lst){lst$uri})
+<<<<<<< HEAD
 names(vec.Namespaces)[ names(vec.Namespaces)=="" ] <- "default"
+=======
+names(vec.Namespaces)[ names(vec.Namespaces)=="" ] <- "default"
+>>>>>>> 2782d2539a853c0c0d7502387c3f2d282d1a551b
