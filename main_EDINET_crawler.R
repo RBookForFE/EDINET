@@ -1,40 +1,55 @@
-## 2013/10/2 
-setwd("C:/R/EDINET")
+## 2014/03/28 
+setwd("F:/R/EDINET")
 # options(encoding="UTF-8")
 
 library("RCurl")
 library("XML")
+library("plyr")
 
-lststrUfoCatcher <- list()
-lststrUfoCatcher[["EDINET"]] <- "http://resource.ufocatch.com/atom/edinetx"
-
+api.service.url <- "http://resource.ufocatch.com/atom/edinetx"
 strSIC <- "1301" # 対象企業の証券コード
 
-strURL <- paste(lststrUfoCatcher[["EDINET"]],"/query/",strSIC,sep="") # http://resource.ufocatch.com/atom/edinetx/query/証券コード
+# リクエストを送信する
+strURL <- paste0(api.service.url,"/query/",strSIC,sep="") # http://resource.ufocatch.com/atom/edinetx/query/証券コード
 objQuery <- httpGET(strURL) # クエリ発行，レスポンスを取得
 
-### htmlParseだとちゃんと動く．どうやらUfoCatcherのResponse XMLがvalidでないらしい
-objXML <- htmlParse(objQuery,isURL=FALSE,encoding="UTF-8")
-nodes_entry <- getNodeSet(objXML,"//entry")
-nodes_title <- getNodeSet(objXML,"//entry/title") # title一覧を取得する
-nodes_id <- getNodeSet(objXML,"//entry/id") # EDINET ID一覧を取得する
-nodes_zip <- getNodeSet(objXML,"//entry/link[@type='application/zip']") # zip形式へのlink一覧を取得する
+# xmlParseにより，UfoCatcherのResponse XMLをXMLInternalDocument形式に変換する
+objXML <- xmlParse(objQuery,encoding="UTF-8")
+# 名前空間の定義を取得する
+objXML.namespaces <- xmlNamespaceDefinitions(objXML,simplify=TRUE)
+# デフォルトの名前空間に接頭辞を付け直す
+names(objXML.namespaces)[ names(objXML.namespaces)=="" ] <- "default"
+# 要素ノード：entryを指定する
+nodes.entry <- getNodeSet(objXML,"//default:entry",namespaces=objXML.namespaces)
 
-isYUHO <- grep(x=unlist(lapply(nodes_title,xmlValue) ),pattern="*有価証券報告書*" ) # titleに"有価証券報告書" を含むentryの番号を返す
-vecYUHO.TITLE <- unlist(lapply(nodes_title[isYUHO],xmlValue))
-vecYUHO.ID <- unlist(lapply(nodes_id[isYUHO],xmlValue))
-vecYUHO.URI <- unlist(lapply(nodes_zip[isYUHO],xmlGetAttr,"href")) # 発見したentryのlinkを取得する
-
-dir.create("data") # "data"フォルダを作成
-
-## XBRLをダウンロード，"data"フォルダに保存
-for(i in 1:length(vecYUHO.ID)){
-  temp <- getBinaryURL(url=vecYUHO.URI[i] )
-  writeBin( temp, paste("data/",vecYUHO.ID[i],".zip",sep="") )
+# 有価証券報告書のみを抽出
+lst.YUHO <- list()
+for(node in nodes.entry){ # <entry>タグをひとつずつ処理
+  lst.temp <- list()
+  # 提出書類のタイトルを取得
+  title.value <- xpathSApply(node,path="default:title",fun=xmlValue,namespaces=objXML.namespaces)
+  # 提出書類のタイトルに「有価証券報告書」を含むか判定
+  is.YUHO <- grepl(pat="*有価証券報告書*",x=title.value)
+  if(is.YUHO){
+    # IDを取得
+    lst.temp$id <- xpathSApply(node,path="default:id",fun=xmlValue,namespaces=objXML.namespaces)
+    lst.temp$title <- title.value
+    # <link>タグのうち，type='application/zip'のhref属性を取得
+    lst.temp$url <- xpathSApply(node,path="default:link[@type='application/zip']/@href",namespaces=objXML.namespaces)
+    lst.YUHO[[lst.temp$id]] <- lst.temp
+  }
 }
 
-## ダウンロードしたリストをデータフレームに変換
-datDownloadedList <- data.frame(edinetid=vecYUHO.ID,title=vecYUHO.TITLE)
+# 抽出した情報をデータフレームに変換
+datDownloadedList <- ldply(lst.YUHO,.fun=data.frame)
+datDownloadedList
 
-## CSV形式で保存
-write.csv(x=datDownloadedList,file="downloaded_XBRL.csv")
+# XBRL形式の財務諸表をダウンロード，"data"フォルダに保存
+dir.create("data") # "data"フォルダを作成
+for(lst in lst.YUHO){
+  temp <- getBinaryURL(url=lst$url ) # バイナリ形式でダウンロード
+  writeBin( temp, paste0("data/",lst$id,".zip") ) # zipファイルとして保存
+}
+
+# CSV形式で保存
+write.csv(x=datDownloadedList,file="downloaded_XBRL.csv",row.names=FALSE)

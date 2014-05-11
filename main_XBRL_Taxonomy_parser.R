@@ -2,12 +2,12 @@
 ### 出典：金融庁(2013),"2013年版EDINETタクソノミ及び関連資料の公表について",http://www.fsa.go.jp/search/20130301.html
 ### タクソノミ本体内部のファイル構成については，"企業別タクソノミ作成ガイドライン[添付資料]"を参照するとよい．
 
-setwd("C:/R/EDINET")
+setwd("F:/R/EDINET")
 library("XML")
 library("plyr")
 
 ## 2013年度版EDINETタクソノミ本体の解凍先
-TaxonomySet.Path <- "C:/R/EDINET/Template/EDINET_taxonomy_2013_jp/"
+TaxonomySet.Path <- "F:/R/EDINET/Template/EDINET_taxonomy_2013_jp/"
 
 ## タクソノミ本体から，語彙タクソノミ・名称リンク・定義リンクを読み込む
 
@@ -28,8 +28,9 @@ objXML.Definition <- xmlParse( file= objXML.Definition.Path )
 
 ## 語彙タクソノミから，elementを取得
 ### 名前空間の定義を抽出
-lst.Namespaces <- xmlNamespaceDefinitions(objXML.Element)
-vec.Namespaces <- sapply(lst.Namespaces,function(lst){lst$uri})
+# lst.Namespaces <- xmlNamespaceDefinitions(objXML.Element)
+vec.Namespaces <- xmlNamespaceDefinitions(objXML.Element,simplify=TRUE)
+# vec.Namespaces <- sapply(lst.Namespaces,function(lst){lst$uri})
 names(vec.Namespaces)[ names(vec.Namespaces)=="" ] <- "default"
 
 ### 語彙(=element)が定義されたノードの情報を data.frame に変換
